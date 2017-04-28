@@ -60,6 +60,8 @@ class TcpServerHandler extends ChannelInboundHandlerAdapter {
 		String host = ((InetSocketAddress)ctx.channel().remoteAddress()).getAddress().getHostAddress();
 	    int port = ((InetSocketAddress)ctx.channel().remoteAddress()).getPort();
 	    
+	    System.out.println(ctx.channel());
+	    
 		SocketAddress remoteAddress = ctx.channel().remoteAddress();
 		System.out.println("addr:" + remoteAddress +", host="+ host +", port="+ port);
 

@@ -17,8 +17,8 @@ public class TcpClient {
 
 			try {
 
-//				socket = new Socket("localhost", 8080);
-				socket = new Socket("60.205.230.151", 8181);
+				socket = new Socket("localhost", 8080);
+//				socket = new Socket("60.205.230.151", 8181);
 				out = socket.getOutputStream();
 
 				// 第一次请求服务器
@@ -27,11 +27,11 @@ public class TcpClient {
 				out.write(outputBytes1);
 				out.flush();
 
-				// 第二次请求服务器
-				String lines2 = "World\r\n";
-				byte[] outputBytes2 = lines2.getBytes("UTF-8");
-				out.write(outputBytes2);
-				out.flush();
+//				// 第二次请求服务器
+//				String lines2 = "World\r\n";
+//				byte[] outputBytes2 = lines2.getBytes("UTF-8");
+//				out.write(outputBytes2);
+//				out.flush();
 
 			} finally {
 				// 关闭连接
