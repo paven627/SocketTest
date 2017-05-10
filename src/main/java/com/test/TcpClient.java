@@ -1,6 +1,7 @@
 package com.test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
@@ -14,21 +15,22 @@ public class TcpClient {
 			// 46, 49, 57, 52, 32, 49, 57, 50, 46, 49, 54, 56, 46, 49, 46, 49,
 			// 56, 49, 32, 54, 48, 57, 49, 53, 32, 56, 49,
 			// 56, 49, 13, 10,
-			
+
 			// 满长度IP
-//			80, 82, 79, 88, 89, 32, 84, 67, 80, 52, 32, 50, 53, 53, 46, 50, 53, 53, 46, 50, 53, 53, 46, 50, 53, 53, 32,
-//			50, 53, 53, 46, 50, 53, 53, 46, 50, 53, 53, 46, 50, 53, 53, 32, 54, 53, 53, 51, 53, 32, 54, 53, 53, 51, 53,
-//			13, 10,
+			// 80, 82, 79, 88, 89, 32, 84, 67, 80, 52, 32, 50, 53, 53, 46, 50,
+			// 53, 53, 46, 50, 53, 53, 46, 50, 53, 53, 32,
+			// 50, 53, 53, 46, 50, 53, 53, 46, 50, 53, 53, 46, 50, 53, 53, 32,
+			// 54, 53, 53, 51, 53, 32, 54, 53, 53, 51, 53,
+			// 13, 10,
 
 			// ip6地址
-//			80,82,79,88,89,32,84,67,80,54,32,102,102,102,102,58,102,46,46,46,102,58,102,102,102,102,32,102,102,102,102,58,102,46,46,46,102,58,102,102,102,102,32,54,53,53,51,53,32,54,53,53,51,53,13,10,
-			
-			//unknown
-//			80,82,79,88,89,32,85,78,75,78,79,87,78,13,10,
-			// 最长 
-			80,82,79,88,89,32,85,78,75,78,79,87,78,32,102,102,102,102,58,102,46,46,46,102,58,102,102,102,102,32,102,102,102,102,58,102,46,46,46,102,58,102,102,102,102,32,54,53,53,51,53,32,54,53,53,51,53,13,10,
-			
-			
+			// 80,82,79,88,89,32,84,67,80,54,32,102,102,102,102,58,102,46,46,46,102,58,102,102,102,102,32,102,102,102,102,58,102,46,46,46,102,58,102,102,102,102,32,54,53,53,51,53,32,54,53,53,51,53,13,10,
+
+			// unknown
+			// 80,82,79,88,89,32,85,78,75,78,79,87,78,13,10,
+			// 最长
+			// 80,82,79,88,89,32,85,78,75,78,79,87,78,32,102,102,102,102,58,102,46,46,46,102,58,102,102,102,102,32,102,102,102,102,58,102,46,46,46,102,58,102,102,102,102,32,54,53,53,51,53,32,54,53,53,51,53,13,10,
+
 			0, 10, 11, 97, 49, 48, 48, 48, 48, 48, 51, 48, 48, 49, 16, 1, 26, -10, 1, 8, -121, -85, -125, -72, 2, 16,
 			-71, -108, 1, 32, -48, -90, -31, -33, 3, 40, -128, 5, 48, -16, 8, 56, 1, 72, -88, 70, 80, 2, 90, 5, 54, 46,
 			49, 46, 48, 98, 14, 73, 80, 72, 79, 78, 69, 32, 54, 83, 32, 80, 76, 85, 83, 106, 36, 53, 70, 52, 53, 52, 54,
@@ -47,36 +49,74 @@ public class TcpClient {
 	public static void main(String[] args) throws IOException, InterruptedException {
 
 		// 3次TCP连接，每个连接发送2个请求数据
-		// for (int i = 0; i < 3; i++) {
-		Socket socket = null;
-		OutputStream out = null;
+		for (int i = 0; i < 1; i++) { 
+			Socket socket = null;
+			OutputStream out = null;
+			InputStream inputStream = null;
+			try {
 
-		try {
+//				 socket = new Socket("localhost", 8080);
+				socket = new Socket("127.0.0.1", 8181);
+				// socket = new Socket("127.0.0.1", );
+				// socket = new Socket("60.205.230.151", 8080);
+//				socket = new Socket("60.205.230.151", 8181);
+//				 socket = new Socket("192.168.1.181", 8181);
+				out = socket.getOutputStream();
 
-			socket = new Socket("localhost", 8080);
-			// socket = new Socket("127.0.0.1", );
-			// socket = new Socket("60.205.230.151", 8080);
-			out = socket.getOutputStream();
+				out.write(arr);
+				out.flush();
 
-			// 第一次请求服务器
-			// String lines1 = "Hello\r\n";
-			// byte[] outputBytes1 = lines1.getBytes("UTF-8");
-			// out.write(outputBytes1);
-			out.write(arr);
-			out.flush();
+				inputStream = socket.getInputStream();
+				System.out.println(inputStream.available());
+//				byte[] by = toByteArray(inputStream);
+//				for (byte b : by) {
+//					System.out.print((char) b);
+//				}
 
-			// // 第二次请求服务器
-			// String lines2 = "World\r\n";
-			// byte[] outputBytes2 = lines2.getBytes("UTF-8");
-			// out.write(outputBytes2);
-			// out.flush();
+				byte[] b = new byte[inputStream.available()];
+				inputStream.read(b, 0, inputStream.available());
+				for (byte c : b) {
+					System.out.print((char) c);
+				}
 
-		} finally {
-			// 关闭连接
-			out.close();
-			socket.close();
+			} finally {
+				// 关闭连接
+				out.close();
+				inputStream.close();
+				socket.close();
+			}
+
 		}
+	}
 
-		// }
+	public static byte[] toByteArray(InputStream input) throws IOException {
+		byte[] buffer1 = new byte[5];
+		input.read(buffer1, 0, 5);
+		int length = byteArrayToInt(buffer1);
+		byte[] buffer = new byte[length];
+		// System.out.println("buffer.length before->" + buffer.length);
+		// System.out.println("input available->" + input.available());
+		// n = input.read(buffer);
+		int readbytes = 0;
+		while (readbytes < length) {
+			int read = input.read(buffer, readbytes, length - readbytes);
+			if (read == -1) {
+				break;
+			}
+			readbytes += read;
+		}
+		return buffer;
+		// System.out.println("buffer.length after->"+n);
+		// output.write(buffer, 0, n);
+		// return output.toByteArray();
+	}
+
+	public static int byteArrayToInt(byte[] bytes) {
+		int value = 0;
+		for (int i = 1; i < 5; i++) {
+			int shift = (5 - 1 - i) * 8;
+			value += (bytes[i] & 0x000000FF) << shift;
+		}
+		return value;
 	}
 }

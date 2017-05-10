@@ -2,12 +2,13 @@ package com.test;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.moji.launchserver.AdCommonInterface.AdRequest;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufProcessor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -17,11 +18,16 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.haproxy.HAProxyMessage;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
+import io.netty.util.ReferenceCountUtil;
 
 public class TcpServer {
+	static Logger logger = Logger.getLogger(TcpServer.class);
 
 	public static void main(String[] args) throws InterruptedException {
 		EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -33,12 +39,17 @@ public class TcpServer {
 						@Override
 						public void initChannel(SocketChannel ch) throws Exception {
 							ChannelPipeline pipeline = ch.pipeline();
+							pipeline.addLast(new HAProxyMessageDecoder());
 							pipeline.addLast(new DecodeHandler());
+//							pipeline.addLast(new TcpServerHandler());
 
 							byte[] endMark = { -128, -128, -128, -128, -128 };
 							ByteBuf delimter = Unpooled.copiedBuffer(endMark);
 							pipeline.addLast("delimiterBasedFrameDecoder",
 									new DelimiterBasedFrameDecoder(4096, delimter));
+							
+							pipeline.addLast("realHandler", new RealHandler());
+							
 						}
 					});
 			ChannelFuture f = b.bind(8080).sync();
@@ -53,61 +64,72 @@ public class TcpServer {
 
 class DecodeHandler extends ByteToMessageDecoder {
 
-	int proxy = 5;
+	Logger logger = Logger.getLogger(DecodeHandler.class);
 
 	@Override
 	protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-		// int readableBytes = in.readableBytes();
+		int readableBytes = in.readableBytes();
 
-		// byte[] sign = new byte[5];
-		// in.readBytes(sign);
-		// String s = new String (sign);
-		// System.out.println(s);
-		// byte b = 13;
-		// int indexOf = in.indexOf(0, 113, b);
-		// System.out.println(indexOf);
-
-		int rIndex = in.forEachByte(0, 108, ByteBufProcessor.FIND_CR);
-		System.out.println(rIndex);
-		int nIndex = in.forEachByte(rIndex + 1, 1, ByteBufProcessor.FIND_LF);
-		System.out.println(nIndex);
-
-		byte[] proxyLine = new byte[nIndex + 1];
-		in.readBytes(proxyLine, 0, nIndex + 1);
-		for (byte b : proxyLine) {
-			System.out.print((int) b + ",");
-		}
+		logger.info("decoder, readable = " + readableBytes + ", Thread=" + Thread.currentThread());
+//		byte[] sign = new byte[readableBytes];
+//		in.readBytes(sign);
+//		logger.info("数据=" + new String(sign) + ", Thread=" + Thread.currentThread());
+//		for (byte b : sign) {
+//			System.out.print((int) b + ",");
+//		}
 		System.out.println();
-
-		System.out.println();
-		for (byte c :proxyLine) {
-			System.out.print((char) c );
-		}
-		String[] arr = splitToStr(proxyLine);
-		for (String string : arr) {
-			System.out.println(string);
-		}
-		byte proType = in.readByte(); // 1字节的协议类型
-		System.out.println("type=" + proType);
-
-		// readByte = in.readByte();
-		// System.out.println((int)readByte);
-
-		ctx.pipeline().addLast(new TcpServerHandler()); // 针对每个TCP连接创建一个新的ChannelHandler实例
+		
+//		List<String> names = ctx.pipeline().names();
+//		System.out.println(names);
+		ctx.pipeline().addLast( "real", new RealHandler());
 		ctx.pipeline().remove(this);
+//		System.out.println(ctx.pipeline().names());
 	}
 
-	private String[] splitToStr(byte[] proxyLine) {
-		String proxy = new String (proxyLine);
-		String[] split = proxy.split(" ");
-		return split;
-	}
-	
 }
 
-/**
- * 每个连接使用不同的Handler，可以保存一个变量进行计数
- */
+
+class RealHandler extends ChannelInboundHandlerAdapter {
+
+	HAProxyMessage ha;
+
+	@Override
+	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+		System.out.println("22222222222222");
+		if (msg instanceof HAProxyMessage) {
+			ha = (HAProxyMessage) msg;
+			String sourceAddress = ha.sourceAddress();
+			System.out.println("1:" + sourceAddress + Thread.currentThread());
+		} else {
+			ByteBuf in = (ByteBuf) msg;
+			int readableBytes = in.readableBytes();
+			System.out.println("readable=" + readableBytes);
+//			if (readableBytes != 326) {
+//				System.out.println("111111111111111111111111111111");
+//			}
+			byte type = in.readByte();
+			System.out.println("type=" + (int) type + Thread.currentThread());
+			byte[] b = new byte[in.readableBytes()];
+			in.readBytes(b);
+			System.out.println("请求数据");
+			if( ha != null) {
+				System.out.println("2:" + ha.sourceAddress() + ", " + Thread.currentThread());
+			}
+			
+			// for (byte c : b) {
+			// System.out.print((int)c);
+			// }
+
+			// AdRequest adRequest = AdRequest.parseFrom(b);
+			// System.out.println(adRequest);
+		}
+
+	}
+}
+
+
+
+
 class TcpServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
@@ -115,10 +137,6 @@ class TcpServerHandler extends ChannelInboundHandlerAdapter {
 
 		ByteBuf in = (ByteBuf) msg;
 		try {
-			// while (in.isReadable()) { // (1)
-			// System.out.print((char) in.readByte() +" ,");
-			// System.out.flush();
-			// }
 
 			byte[] b = new byte[in.readableBytes()];
 			in.readBytes(b);
@@ -130,7 +148,9 @@ class TcpServerHandler extends ChannelInboundHandlerAdapter {
 			System.out.println(adRequest);
 
 		} finally {
-			// ReferenceCountUtil.release(msg); // (2)
+			ReferenceCountUtil.release(msg); // (2)
+			// ctx.writeAndFlush(Unpooled.copiedBuffer("OK111111".getBytes()));
+			// ctx.close();
 		}
 	}
 
